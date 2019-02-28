@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "target": "es2017",
+        "lib": ["es2017", "dom"],
+        "module": "commonjs",
+        "sourceMap": true,
+        "typeRoots": ["node_modules\\@types"]
+    },
+}

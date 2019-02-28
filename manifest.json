@@ -1,0 +1,32 @@
+{
+    "manifest_version": 2,
+    "name": "Drafty",
+    "version": 0.1,
+
+    "description": "Saves long posts and form history to the cloud for access via Firefox Sync.",
+
+    "icons": {
+        "48": "icons/border-48.png"
+    },
+
+    "content_scripts": [
+        {
+            "matches": ["*"],
+            "scripts": "content.js"
+        }
+    ],
+
+    "background": {
+        "scripts": ["lz-string.min.js", "background.js"]
+    },
+
+    "applications": {
+        "gecko": {
+            "id": "drafty@muridemo"
+        }
+    },
+
+    "permissions": [
+        "storage"
+    ]
+}
