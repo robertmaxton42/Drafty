@@ -1,26 +1,10 @@
 import LZString from './lz-string.min.js';
-
-interface DraftRecord {
-    cmpDraft: String,
-    lastModified: Date,
-    lastDomain: String
-}
-
-interface ActiveRecord {
-    draft: String,
-    blurb: String,
-    lastModified: Date,
-    lastDomain: String
-}
-
-interface ActiveDraft {
-    draft: String,
-    fresh: Boolean,
-    lastDomain: String
-}
+import { DraftRecord, ActiveDraft, ActiveRecord } from './types';
 
 var main = async function(){
     let getting : Promise<Array<DraftRecord>> = browser.storage.sync.get('drafts');
+    // Note: I have no idea what this will do when mincount hasn't yet been set.
+    let mincount : Promise<number> = browser.storage.sync.get('mincount');
     let active : number;
 
     async function receiveDraft(message: ActiveDraft, sender, responder) {
@@ -56,7 +40,11 @@ var main = async function(){
     }
 
     browser.runtime.onMessage.addListener(receiveDraft);
+
+    if (await mincount )
 }
+
+main();
 
 
 
