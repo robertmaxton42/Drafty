@@ -11,8 +11,8 @@
 
     "content_scripts": [
         {
-            "matches": ["*"],
-            "scripts": "content.js",
+            "matches": ["<all_urls>"],
+            "scripts": ["jquery-3.3.1.slim.min.js", "content.js"],
             "all_frames": true
         }
     ],
