@@ -8,7 +8,13 @@ var main = async function(){
     let active : number;
 
     async function receiveDraft(message: ActiveDraft, sender, responder) {
-        let cmp : String = LZString.compressToUTF16(message.draft);
+        let cmp : String = LZString.compressToUTF16(message.oldDraft);
+        //Consider the case of two drafts in the same thread. 
+        //If you switch between them -- delete everything in the post
+        //and replace with a different draft -- this logic would overwrite
+        //the first draft with the second.
+        //Similarly if you delete everything in the post and copy in
+        //an unrelated long post.
         let drafts = await getting;
         if (message.fresh) {
             //If the draft already exists, set that slot as active;

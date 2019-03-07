@@ -12,7 +12,7 @@ export interface ActiveRecord {
 }
 
 export interface ActiveDraft {
-    draft: String,
-    fresh: Boolean,
+    oldDraft: String,
+    newDraft: String,
     lastDomain: Location
 }
