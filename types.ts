@@ -13,6 +13,7 @@ export interface ActiveRecord {
 
 export interface ActiveDraft {
     oldDraft: String,
-    newDraft: String,
-    lastDomain: Location
+    diff: String,
+    lastDomain: Location,
+    slot: number
 }

@@ -5,31 +5,46 @@ import * as $ from 'jquery'
 //This *should* mean "after all page scripts are run" -- so 
 //including e.g. Xenforo's own draft functionality.
 
-let mincount = browser.storage.sync.get('mincount');
+let mincount: Promise<number> = browser.storage.sync.get('mincount');
 let fresh = true;
 
+async function textareaScan() {
+    if (this.textContent.length > await mincount) {
+        const draft = composeNewDraft(this.textContent);
+        submitDraft(draft).then((slot) => this.draftySlot = slot);
+    }
+}
+
+async function contentEditableScan() {
+    if (this.textContent.length > await mincount) {
+        const draft = composeNewDraft(this.innerHTML);
+        submitDraft(draft).then((slot) => this.draftSlot = slot);
+    }
+}
+
 async function freshScan() {
-    function textareaScan(e: Element)
     $( "textarea" ).map( textareaScan );
-    if (e instanceof HTMLTextAreaElement) {
-        draftQ = e.textContent;
-        charcount = e.textContent.length;
-    } else if (e instanceof HTMLElement && e.contentEditable !== "false") {
-        draftQ = e.innerHTML;
-        charcount = e.textContent.length;
-    }
-
-    if (charcount > await mincount) {
-        composeDraft(draftQ);
-    }
+    $( "[contenteditable][contenteditable!='false']" ).map( contentEditableScan );
 }
 
-function composeDraft(draft: String) : ActiveDraft {
+function composeNewDraft(draft: String) : ActiveDraft {
     return {
-        draft: draft,
-        fresh: fresh,
-        lastDomain: window.location
+        oldDraft: draft,
+        diff: "",
+        lastDomain: window.location,
+        slot: undefined
     }
 }
 
-document.addEventListener('input', );
+function composeDiffDraft(draft: String, diff: String, slot: number) : ActiveDraft {
+    return {
+        oldDraft: draft,
+        diff: diff,
+        lastDomain: window.location,
+        slot: slot
+    }
+}
+
+async function submitDraft(draft: ActiveDraft) : Promise<number> {
+    return browser.runtime.sendMessage(draft);
+}
