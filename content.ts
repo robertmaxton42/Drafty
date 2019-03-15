@@ -1,5 +1,13 @@
 import { DraftRecord, ActiveDraft, ActiveRecord } from './types';
-import * as $ from 'jquery'
+import { diff_match_patch } from 'diff-match-patch';
+import * as $ from 'jquery';
+
+class contentWatcher {
+    constructor(e: HTMLElement) {
+        
+    }
+}
+
 
 //Offscreen logic: content.js ought to run when page is idle.
 //This *should* mean "after all page scripts are run" -- so 
@@ -7,6 +15,16 @@ import * as $ from 'jquery'
 
 let mincount: Promise<number> = browser.storage.sync.get('mincount');
 let fresh = true;
+
+function countWatcher(e: InputEvent) {
+    const count = (<HTMLElement>e.target).innerHTML.length;
+
+}
+
+
+async function textareaHandler() {
+    
+}
 
 async function textareaScan() {
     if (this.textContent.length > await mincount) {
@@ -22,7 +40,7 @@ async function contentEditableScan() {
     }
 }
 
-async function freshScan() {
+function freshScan() {
     $( "textarea" ).map( textareaScan );
     $( "[contenteditable][contenteditable!='false']" ).map( contentEditableScan );
 }
