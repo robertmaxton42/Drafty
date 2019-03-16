@@ -2,9 +2,40 @@ import { DraftRecord, ActiveDraft, ActiveRecord } from './types';
 import { diff_match_patch } from 'diff-match-patch';
 import * as $ from 'jquery';
 
+class CacheFillEvent extends CustomEvent<string> {
+    constructor(details) {
+        super('cachefill', {
+            bubbles: true,
+            cancelable: false,
+            detail: details
+        });
+    }
+}
+
 class contentWatcher {
-    constructor(e: HTMLElement) {
-        
+    constructor(e: HTMLElement, cacheCount: number) {
+        //Fire a CacheFillEvent after cacheCount input events (new characters).
+        //Round up to the nearest character if using an IME (compositionend).
+        e.addEventListener('input', function(){
+            let count = 0;
+
+            return (ev: InputEvent) => {
+                count++;
+                if (count >= cacheCount) {
+                    count = 0;
+                    function fire(){
+                        const details = ""; //for now
+                        ev.target.dispatchEvent(new CacheFillEvent(details)); 
+                    }
+                    if(ev.isComposing) {
+                        //Wait for compositionend
+                        ev.target.addEventListener("compositionend", () => fire());
+                    } else {
+                        fire();
+                    }
+                }
+            }
+        }());
     }
 }
 
