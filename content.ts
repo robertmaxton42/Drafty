@@ -1,8 +1,10 @@
-import { DraftRecord, ActiveDraft, ActiveRecord } from './types';
+import { Types as T } from './types';
+import { Utility } from './utility';
 import { diff_match_patch } from 'diff-match-patch';
 import * as $ from 'jquery';
+class CacheFillEvent extends CustomEvent<T.CachedDelta> {
+    target: HTMLElement;
 
-class CacheFillEvent extends CustomEvent<string> {
     constructor(details) {
         super('cachefill', {
             bubbles: true,
@@ -12,19 +14,36 @@ class CacheFillEvent extends CustomEvent<string> {
     }
 }
 
+class TranspositionEvent extends CustomEvent<T.Transposition> {
+    target: HTMLElement;
+
+    constructor(details: T.Transposition) {
+        super('transposition', {
+            bubbles: true,
+            cancelable: false,
+            detail: details
+        })
+    }
+}
+
 class contentWatcher {
     constructor(e: HTMLElement, cacheCount: number) {
         //Fire a CacheFillEvent after cacheCount input events (new characters).
         //Round up to the nearest character if using an IME (compositionend).
         e.addEventListener('input', function(){
             let count = 0;
+            const original = Utility.agnosticGetInnerHTML(this);
 
             return (ev: InputEvent) => {
                 count++;
                 if (count >= cacheCount) {
                     count = 0;
                     function fire(){
-                        const details = ""; //for now
+                        const delta = Utility.agnosticGetInnerHTML(<HTMLElement>ev.target);
+                        const details = { 
+                            original: original,
+                            delta: delta
+                        }
                         ev.target.dispatchEvent(new CacheFillEvent(details)); 
                     }
                     if(ev.isComposing) {
@@ -36,6 +55,36 @@ class contentWatcher {
                 }
             }
         }());
+        e.addEventListener('cachefill', (ev: CacheFillEvent) => {
+            let diff = differ.diff_main(ev.detail.original, ev.detail.delta);
+            differ.diff_cleanupEfficiency(diff);
+            diff.reduce<T.PatchFold>((acc:T.PatchFold, nxt) => {
+                const patchl = nxt[1].length;
+                switch(nxt[0]) {
+                    case -1: 
+                         return {
+                             cursor: acc.cursor, //deletion doesn't move the cursor
+                             patchlist: acc.patchlist.concat([[T.PatchType.Deletion, acc.cursor, patchl]])
+                         }
+                    case 0:
+                         return {
+                             cursor: acc.cursor + patchl,
+                             patchlist: acc.patchlist
+                         }
+                    case 1:
+                         return {
+                             cursor: acc.cursor + patchl,
+                             patchlist: acc.patchlist.concat([[T.PatchType.Insertion, acc.cursor, nxt[1]]])
+                         }
+                }
+            }, { cursor: 0, patchlist: [] })
+            for (const step of diff) {
+                switch(step[0]) {
+                    case -1:
+                }
+            }  
+        })
+        //TODO add event definitiion and listener for transposition
     }
 }
 
@@ -46,6 +95,7 @@ class contentWatcher {
 
 let mincount: Promise<number> = browser.storage.sync.get('mincount');
 let fresh = true;
+const differ = new diff_match_patch()
 
 function countWatcher(e: InputEvent) {
     const count = (<HTMLElement>e.target).innerHTML.length;
