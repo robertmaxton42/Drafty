@@ -14,51 +14,33 @@ class CacheFillEvent extends CustomEvent<T.CachedDelta> {
     }
 }
 
-class TranspositionEvent extends CustomEvent<T.Transposition> {
+class ClearAllEvent extends CustomEvent<any> {
     target: HTMLElement;
 
-    constructor(details: T.Transposition) {
-        super('transposition', {
+    constructor(details) {
+        super('clearall', {
             bubbles: true,
             cancelable: false,
             detail: details
-        })
+        });
     }
 }
 
 class contentWatcher {
-    constructor(e: HTMLElement, cacheCount: number) {
+    count: number
+    cacheSize: number
+    clearall: (ev: CacheFillEvent) => void
+
+    constructor(e: HTMLElement, cacheSize: number) {
         //Fire a CacheFillEvent after cacheCount input events (new characters).
         //Round up to the nearest character if using an IME (compositionend).
-        e.addEventListener('input', function(){
-            let count = 0;
-            const original = Utility.agnosticGetInnerHTML(this);
+        this.count = 0;
+        this.cacheSize = cacheSize;
 
-            return (ev: InputEvent) => {
-                count++;
-                if (count >= cacheCount) {
-                    count = 0;
-                    function fire(){
-                        const delta = Utility.agnosticGetInnerHTML(<HTMLElement>ev.target);
-                        const details = { 
-                            original: original,
-                            delta: delta
-                        }
-                        ev.target.dispatchEvent(new CacheFillEvent(details)); 
-                    }
-                    if(ev.isComposing) {
-                        //Wait for compositionend
-                        ev.target.addEventListener("compositionend", () => fire());
-                    } else {
-                        fire();
-                    }
-                }
-            }
-        }());
-        e.addEventListener('cachefill', (ev: CacheFillEvent) => {
+        this.clearall = function(ev: CacheFillEvent) {
             let diff = differ.diff_main(ev.detail.original, ev.detail.delta);
             differ.diff_cleanupEfficiency(diff);
-            diff.reduce<T.PatchFold>((acc:T.PatchFold, nxt) => {
+            let patchfold = diff.reduce<T.PatchFold>((acc:T.PatchFold, nxt) => {
                 const patchl = nxt[1].length;
                 switch(nxt[0]) {
                     case -1: 
@@ -77,14 +59,46 @@ class contentWatcher {
                              patchlist: acc.patchlist.concat([[T.PatchType.Insertion, acc.cursor, nxt[1]]])
                          }
                 }
-            }, { cursor: 0, patchlist: [] })
-            for (const step of diff) {
-                switch(step[0]) {
-                    case -1:
+            }, { cursor: 0, patchlist: [] });
+            submitDraft(patchfold.patchlist);
+        }
+        e.addEventListener('input', this.track);
+        e.addEventListener('cachefill', )
+
+        //Fire early if the user does something that looks like a transposition
+        e.addEventListener('cut', (ev) => track(ev, true));
+        e.addEventListener('copy', (ev) => {
+            let psuedocut = function (ev: KeyboardEvent){
+                if ( ["Backspace", "Clear", "Delete"].some(v => (v == ev.key)) )
+                    track(ev, true);
+                ev.target.removeEventListener('keydown', psuedocut);
                 }
-            }  
+            ev.target.addEventListener('keydown', psuedocut);
         })
-        //TODO add event definitiion and listener for transposition
+        e.addEventListener('dragstart', (ev) => track(ev, true));
+        //TODO Make the background handler check for a deletion
+        //followed by an insertion of the same characters.
+    }
+    track(ev: Event, override: boolean = false) {
+        this.count++;
+        if (override || this.count >= this.cacheSize) {
+            this.count = 0;
+            function fire(){
+                const delta = Utility.agnosticGetInnerHTML(<HTMLElement>ev.target);
+                const details = { 
+                    original: original,
+                    delta: delta
+                }
+                ev.target.dispatchEvent(new CacheFillEvent(details)); 
+                original = delta;
+            }
+            if(ev instanceof InputEvent && ev.isComposing) {
+                //Wait for compositionend
+                ev.target.addEventListener("compositionend", () => fire());
+            } else {
+                fire();
+            }
+        }
     }
 }
 
@@ -102,48 +116,6 @@ function countWatcher(e: InputEvent) {
 
 }
 
-
-async function textareaHandler() {
-    
-}
-
-async function textareaScan() {
-    if (this.textContent.length > await mincount) {
-        const draft = composeNewDraft(this.textContent);
-        submitDraft(draft).then((slot) => this.draftySlot = slot);
-    }
-}
-
-async function contentEditableScan() {
-    if (this.textContent.length > await mincount) {
-        const draft = composeNewDraft(this.innerHTML);
-        submitDraft(draft).then((slot) => this.draftSlot = slot);
-    }
-}
-
-function freshScan() {
-    $( "textarea" ).map( textareaScan );
-    $( "[contenteditable][contenteditable!='false']" ).map( contentEditableScan );
-}
-
-function composeNewDraft(draft: String) : ActiveDraft {
-    return {
-        oldDraft: draft,
-        diff: "",
-        lastDomain: window.location,
-        slot: undefined
-    }
-}
-
-function composeDiffDraft(draft: String, diff: String, slot: number) : ActiveDraft {
-    return {
-        oldDraft: draft,
-        diff: diff,
-        lastDomain: window.location,
-        slot: slot
-    }
-}
-
-async function submitDraft(draft: ActiveDraft) : Promise<number> {
+async function submitDraft(draft: Array<T.Patch>) : Promise<number> {
     return browser.runtime.sendMessage(draft);
 }

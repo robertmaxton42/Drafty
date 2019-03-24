@@ -19,20 +19,23 @@ export namespace Types {
         slot: number
     }
 
-    export enum PatchType { Deletion = -1, Identity, Insertion, Transposition }
-
-    export interface PatchFold {
-        cursor: number,
-        patchlist: Array<[
-            PatchType, 
-            number, //cursor position
-            number | string | Transposition //del char count | ins chars | trans obj
-        ]>
-    }
     export interface Transposition {
         chars: number,
         from: number,
         to: number
+    }
+
+    export enum PatchType { Deletion = -1, Identity, Insertion, Transposition }
+
+    export type Patch = [
+        PatchType, 
+        number, //cursor position
+        number | string | Transposition  //del char count | ins chars | trans obj
+    ]
+
+    export interface PatchFold {
+        cursor: number,
+        patchlist: Array<Patch>
     }
 
     export interface CachedDelta {
