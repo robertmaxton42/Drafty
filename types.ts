@@ -2,20 +2,19 @@ export namespace Types {
     export interface DraftRecord {
         cmpDraft: string,
         lastModified: Date,
-        lastDomain: Location
+        lastURL: Location
     }
 
     export interface ActiveRecord {
         draft: string,
         blurb: string,
         lastModified: Date,
-        lastDomain: Location
+        lastURL: Location
     }
 
     export interface ActiveDraft {
-        oldDraft: string,
-        diff: string,
-        lastDomain: Location,
+        draft: Array<Patch>
+        lastURL: Location,
         slot: number
     }
 

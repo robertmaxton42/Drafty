@@ -128,8 +128,13 @@ class ContentWatcher {
         this.deconstruct();   
     }
 
-    async submitDraft(draft: Array<T.Patch>) : Promise<number> {
-        return browser.runtime.sendMessage(draft);
+    async submitDraft(draft: Array<T.Patch>) : Promise<any> {
+        let msg: T.ActiveDraft = {
+            draft: draft,
+            lastURL: site,
+            slot: this.slot
+        }
+        return browser.runtime.sendMessage(msg);
     }
 }
 
@@ -138,18 +143,26 @@ class ContentWatcher {
 //This *should* mean "after all page scripts are run" -- so 
 //including e.g. Xenforo's own draft functionality.
 
-let mincount: Promise<number> = browser.storage.sync.get('mincount');
-let cachesize: Promise<number> = browser.storage.sync.get('cachesize');
+let getting: Promise<[number, number, number]> = Promise.all([
+    browser.storage.sync.get('mincount'),
+    browser.storage.sync.get('cachesize'),
+    browser.storage.sync.get('activeslots')
+])
+
 let watchers = [];
 let differ = new diff_match_patch();
 let fresh = true;
+let mincount: number;
+let cachesize: number;
+let activeslots: number;
+let site = window.location;
 
 async function watcherSpawner(e: InputEvent) {
+    [mincount, cachesize, activeslots] = await getting;
     const target = <HTMLElement> e.target;
     const count = target.innerHTML.length;
-    if (count > await mincount) {
-        //TODO Assign new slot number
-        watchers.push(new ContentWatcher(target, await cachesize));
+    if (count > mincount) {
+        watchers.push(new ContentWatcher(target, cachesize, activeslots));
     }
 }
 
